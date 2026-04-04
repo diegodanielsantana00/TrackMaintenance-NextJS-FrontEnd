@@ -1,15 +1,53 @@
 'use client'
 
-import { Bell, Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { api } from '@/lib/api'
+import { authService } from '@/features/auth/services/auth-service'
 
 interface HeaderProps {
   titulo: string
   subtitulo?: string
 }
 
+interface UserProfile {
+  id: string
+  name: string
+  email: string
+}
+
 export function Header({ titulo, subtitulo }: HeaderProps) {
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    api.get<UserProfile>('/v1/users/me')
+      .then((res) => {
+        if (res.data) setUser(res.data)
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleLogout = () => {
+    authService.logout()
+    router.push('/login')
+  }
+
+  const initials = user?.name
+    ?.split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || '?'
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       <div>
@@ -20,34 +58,29 @@ export function Header({ titulo, subtitulo }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Busca */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar algo..."
-            className="h-10 w-72 rounded-lg border border-input bg-background pl-10 pr-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        {/* Notificacoes */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
-        </Button>
 
         {/* Perfil do Usuario */}
-        <div className="flex items-center gap-3 rounded-lg bg-muted/50 py-1.5 pl-3 pr-1.5">
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">Admin User</p>
-            <p className="text-xs text-muted-foreground">Gerente</p>
-          </div>
-          <Avatar className="h-8 w-8 border-2 border-primary">
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-              AU
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 rounded-lg bg-muted/50 py-1.5 pl-3 pr-1.5 transition-colors hover:bg-muted">
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground">{user?.name || '...'}</p>
+                <p className="text-xs text-muted-foreground">{user?.email || '...'}</p>
+              </div>
+              <Avatar className="h-8 w-8 border-2 border-primary">
+                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair da conta
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

@@ -8,14 +8,14 @@ import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { authService } from "@/features/auth/services/auth-service"
 import { ApiError } from "@/lib/api"
 
-export function LoginForm() {
+export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading]       = useState(false)
+  const [name, setName]                 = useState("")
   const [email, setEmail]               = useState("")
   const [password, setPassword]         = useState("")
   const router = useRouter()
@@ -25,7 +25,7 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      const response = await authService.login({ email, password })
+      const response = await authService.register({ name, email, password })
       if (response.data) {
         authService.saveAuth(response.data)
       }
@@ -57,13 +57,27 @@ export function LoginForm() {
 
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold text-foreground">Bem-vindo de volta</h1>
+            <h1 className="mb-2 text-3xl font-bold text-foreground">Crie sua conta</h1>
             <p className="text-muted-foreground">
-              Digite seu email e senha para acessar sua conta.
+              Preencha os dados abaixo para criar sua conta.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Seu nome completo"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                minLength={3}
+                maxLength={150}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -86,6 +100,8 @@ export function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={8}
+                  maxLength={100}
                   className="pr-10"
                 />
                 <button
@@ -96,18 +112,17 @@ export function LoginForm() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-xs text-muted-foreground">Mínimo de 8 caracteres.</p>
             </div>
 
-         
-
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Entrando..." : "Entrar"}
+              {isLoading ? "Criando conta..." : "Criar conta"}
             </Button>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Ainda nao tem uma conta?{" "}
-              <Link href="/register" className="font-medium text-primary hover:underline">
-                Registre-se agora.
+              Já tem uma conta?{" "}
+              <Link href="/login" className="font-medium text-primary hover:underline">
+                Faça login.
               </Link>
             </p>
           </form>
@@ -118,7 +133,6 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* Right Side */}
       <div className="hidden flex-col justify-center bg-primary p-12 lg:flex lg:w-1/2" />
     </div>
   )

@@ -12,7 +12,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen flex-col">
       <Header
         titulo="Dashboard"
-        subtitulo="Visao geral da sua operacao logistica"
+        subtitulo=""
       />
 
       <div className="flex-1 space-y-6 p-6">

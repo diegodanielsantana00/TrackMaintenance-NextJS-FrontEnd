@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { authService } from '@/features/auth/services/auth-service'
 import { 
   FileText, 
   LayoutDashboard, 
@@ -46,6 +47,7 @@ export function Sidebar() {
   const router = useRouter()
 
   const handleLogout = () => {
+    authService.logout()
     router.push('/login')
   }
 
