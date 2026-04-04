@@ -19,7 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Calendar, DollarSign } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
+import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Calendar, DollarSign, MoreHorizontal, ArrowRightLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { manutencaoService } from '../services/manutencao-service'
 import { veiculoService } from '@/features/veiculos/services/veiculo-service'
@@ -195,6 +203,20 @@ export function ManutencaoTable() {
     }
   }
 
+  const handleStatusChange = async (id: number, status: StatusManutencao) => {
+    try {
+      await manutencaoService.updateStatus(id, status)
+      toast.success('Status atualizado com sucesso!')
+      fetchManutencoes()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message)
+      } else {
+        toast.error('Erro ao atualizar status.')
+      }
+    }
+  }
+
   const handlePageSizeChange = (value: string) => {
     setPageSize(parseInt(value))
     setPage(0)
@@ -289,6 +311,35 @@ export function ManutencaoTable() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={m.status === 'PENDENTE'}
+                              onClick={() => handleStatusChange(m.id, 'PENDENTE')}
+                            >
+                              Pendente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={m.status === 'EM_REALIZACAO'}
+                              onClick={() => handleStatusChange(m.id, 'EM_REALIZACAO')}
+                            >
+                              Em Realização
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={m.status === 'CONCLUIDA'}
+                              onClick={() => handleStatusChange(m.id, 'CONCLUIDA')}
+                            >
+                              Concluída
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(m)}>
                           <Pencil className="h-4 w-4" />
                         </Button>

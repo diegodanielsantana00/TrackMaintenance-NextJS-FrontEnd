@@ -80,6 +80,9 @@ export const api = {
   put: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
     request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
 
+  patch: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
+    request(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
+
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request(endpoint, { ...options, method: 'DELETE' }) as Promise<ApiResponse<T>>,
 }

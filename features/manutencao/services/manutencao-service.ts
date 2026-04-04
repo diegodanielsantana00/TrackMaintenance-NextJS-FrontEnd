@@ -21,7 +21,7 @@ export const manutencaoService = {
     api.put<Manutencao>(`/v1/manutencoes/${id}`, data),
 
   updateStatus: (id: number, status: StatusManutencao) =>
-    api.put<Manutencao>(`/v1/manutencoes/${id}/status`, { status }),
+    api.patch<Manutencao>(`/v1/manutencoes/${id}/status`, { status }),
 
   delete: (id: number) =>
     api.delete(`/v1/manutencoes/${id}`),
