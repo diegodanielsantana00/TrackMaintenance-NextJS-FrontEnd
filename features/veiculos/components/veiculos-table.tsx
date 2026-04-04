@@ -1,36 +1,165 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import { veiculosData, statusConfig } from '../models/veiculo'
-
-const PAGE_SIZE = 5
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { veiculoService } from '../services/veiculo-service'
+import type { Veiculo, VeiculoRequest, TipoVeiculo } from '../models/veiculo'
+import { tipoConfig } from '../models/veiculo'
+import { ApiError } from '@/lib/api'
 
 export function VeiculosTable() {
+  const [veiculos, setVeiculos]       = useState<Veiculo[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [page, setPage]               = useState(0)
+  const [pageSize, setPageSize]       = useState(10)
+  const [totalPages, setTotalPages]   = useState(1)
+  const [totalElements, setTotalElements] = useState(0)
   const [search, setSearch]           = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('todos')
-  const [page, setPage]               = useState(1)
 
-  const filtered = useMemo(() => {
-    return veiculosData.filter((v) => {
-      const matchSearch =
-        v.placa.toLowerCase().includes(search.toLowerCase()) ||
-        v.modelo.toLowerCase().includes(search.toLowerCase()) ||
-        v.localizacao.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = statusFilter === 'todos' || v.status === statusFilter
-      return matchSearch && matchStatus
-    })
-  }, [search, statusFilter])
+  // Dialog state
+  const [dialogOpen, setDialogOpen]   = useState(false)
+  const [dialogMode, setDialogMode]   = useState<'create' | 'edit'>('create')
+  const [editingId, setEditingId]     = useState<number | null>(null)
+  const [saving, setSaving]           = useState(false)
 
-  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  // Delete dialog
+  const [deleteOpen, setDeleteOpen]   = useState(false)
+  const [deletingId, setDeletingId]   = useState<number | null>(null)
+  const [deleting, setDeleting]       = useState(false)
 
-  const handleFilterChange = (value: string) => { setStatusFilter(value); setPage(1) }
-  const handleSearchChange = (value: string) => { setSearch(value);       setPage(1) }
+  // Form fields
+  const [formPlaca, setFormPlaca]     = useState('')
+  const [formModelo, setFormModelo]   = useState('')
+  const [formTipo, setFormTipo]       = useState<TipoVeiculo>('LEVE')
+  const [formAno, setFormAno]         = useState('')
+
+  const fetchVeiculos = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await veiculoService.list(page, pageSize)
+      setVeiculos(res.data ?? [])
+      setTotalPages(res.totalPages ?? 1)
+      setTotalElements(res.totalElements ?? 0)
+    } catch {
+      toast.error('Erro ao carregar veículos.')
+    } finally {
+      setLoading(false)
+    }
+  }, [page, pageSize])
+
+  useEffect(() => {
+    fetchVeiculos()
+  }, [fetchVeiculos])
+
+  const filtered = veiculos.filter((v) => {
+    const q = search.toLowerCase()
+    return (
+      v.placa.toLowerCase().includes(q) ||
+      v.modelo.toLowerCase().includes(q)
+    )
+  })
+
+  // CRUD handlers
+  const openCreate = () => {
+    setDialogMode('create')
+    setEditingId(null)
+    setFormPlaca('')
+    setFormModelo('')
+    setFormTipo('LEVE')
+    setFormAno('')
+    setDialogOpen(true)
+  }
+
+  const openEdit = (v: Veiculo) => {
+    setDialogMode('edit')
+    setEditingId(v.id)
+    setFormPlaca(v.placa)
+    setFormModelo(v.modelo)
+    setFormTipo(v.tipo)
+    setFormAno(v.ano?.toString() || '')
+    setDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const payload: VeiculoRequest = {
+      placa: formPlaca,
+      modelo: formModelo,
+      tipo: formTipo,
+      ano: formAno ? parseInt(formAno) : null,
+    }
+
+    try {
+      if (dialogMode === 'create') {
+        await veiculoService.create(payload)
+        toast.success('Veículo criado com sucesso!')
+      } else {
+        await veiculoService.update(editingId!, payload)
+        toast.success('Veículo atualizado com sucesso!')
+      }
+      setDialogOpen(false)
+      fetchVeiculos()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message)
+      } else {
+        toast.error('Erro ao salvar veículo.')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openDelete = (id: number) => {
+    setDeletingId(id)
+    setDeleteOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingId) return
+    setDeleting(true)
+    try {
+      await veiculoService.delete(deletingId)
+      toast.success('Veículo removido com sucesso!')
+      setDeleteOpen(false)
+      fetchVeiculos()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message)
+      } else {
+        toast.error('Erro ao remover veículo.')
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(parseInt(value))
+    setPage(0)
+  }
+
+  const startItem = totalElements === 0 ? 0 : page * pageSize + 1
+  const endItem = Math.min((page + 1) * pageSize, totalElements)
 
   return (
     <>
@@ -42,22 +171,12 @@ export function VeiculosTable() {
             <Input
               placeholder="Buscar por placa, modelo..."
               value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-8 text-sm"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => handleFilterChange(e.target.value)}
-            className="rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="todos">Todos os status</option>
-            <option value="disponivel">Disponível</option>
-            <option value="em-transito">Em Trânsito</option>
-            <option value="manutencao">Manutenção</option>
-          </select>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Adicionar Veículo
         </Button>
@@ -70,43 +189,46 @@ export function VeiculosTable() {
             <tr className="border-b border-border">
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Placa</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Modelo</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground md:table-cell">Localização</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">KM</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground lg:table-cell">Combustível</th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">Tipo</th>
+              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground md:table-cell">Ano</th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {paginated.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                  Carregando...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
                   Nenhum veículo encontrado.
                 </td>
               </tr>
             ) : (
-              paginated.map((v) => {
-                const s = statusConfig[v.status]
+              filtered.map((v) => {
+                const t = tipoConfig[v.tipo]
                 return (
                   <tr key={v.id} className="transition-colors hover:bg-muted/40">
                     <td className="px-4 py-3 font-medium text-foreground">{v.placa}</td>
                     <td className="px-4 py-3 text-muted-foreground">{v.modelo}</td>
-                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{v.localizacao}</td>
-                    <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{v.km} km</td>
-                    <td className="hidden px-4 py-3 lg:table-cell">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={`h-full rounded-full ${
-                              v.combustivel > 70 ? 'bg-emerald-500' : v.combustivel > 40 ? 'bg-amber-500' : 'bg-destructive'
-                            }`}
-                            style={{ width: `${v.combustivel}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground">{v.combustivel}%</span>
-                      </div>
+                    <td className="hidden px-4 py-3 sm:table-cell">
+                      <Badge variant={t.variant} className="text-xs">{t.label}</Badge>
+                    </td>
+                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                      {v.ano || '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={s.variant} className="text-xs">{s.label}</Badge>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(v)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => openDelete(v.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -118,41 +240,137 @@ export function VeiculosTable() {
 
       {/* Pagination */}
       <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {filtered.length === 0
-            ? 'Nenhum resultado'
-            : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} de ${filtered.length} veículos`}
-        </span>
+        <div className="flex items-center gap-2">
+          <span>Linhas por página:</span>
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="h-8 w-[70px]" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>
+            {totalElements === 0
+              ? 'Nenhum resultado'
+              : `${startItem}–${endItem} de ${totalElements}`}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost" size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
             className="h-8 w-8 p-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+          {Array.from({ length: totalPages }, (_, i) => i).map((n) => (
             <Button
               key={n}
-              variant={n === currentPage ? 'default' : 'ghost'}
+              variant={n === page ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPage(n)}
               className="h-8 w-8 p-0 text-xs"
             >
-              {n}
+              {n + 1}
             </Button>
           ))}
           <Button
             variant="ghost" size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
             className="h-8 w-8 p-0"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogMode === 'create' ? 'Adicionar Veículo' : 'Editar Veículo'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="placa">Placa</Label>
+              <Input
+                id="placa"
+                placeholder="ABC-1234"
+                value={formPlaca}
+                onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
+                maxLength={10}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelo">Modelo</Label>
+              <Input
+                id="modelo"
+                placeholder="Ex: Volvo FH 540"
+                value={formModelo}
+                onChange={(e) => setFormModelo(e.target.value)}
+                maxLength={50}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo</Label>
+              <Select value={formTipo} onValueChange={(v) => setFormTipo(v as TipoVeiculo)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LEVE">Leve</SelectItem>
+                  <SelectItem value="PESADO">Pesado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ano">Ano</Label>
+              <Input
+                id="ano"
+                type="number"
+                placeholder="Ex: 2024"
+                value={formAno}
+                onChange={(e) => setFormAno(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving || !formPlaca || !formModelo}>
+              {saving ? 'Salvando...' : dialogMode === 'create' ? 'Criar' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
+          </DialogHeader>
+          <p className="py-4 text-sm text-muted-foreground">
+            Tem certeza que deseja remover este veículo? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Removendo...' : 'Remover'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

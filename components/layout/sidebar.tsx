@@ -26,11 +26,6 @@ const navItems: NavItem[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
-    href: '/relatorios',
-    label: 'Relatorios',
-    icon: <FileText className="h-5 w-5" />,
-  },
-  {
     href: '/veiculos',
     label: 'Veiculos',
     icon: <Truck className="h-5 w-5" />,
@@ -39,6 +34,11 @@ const navItems: NavItem[] = [
     href: '/manutencao',
     label: 'Manutenção',
     icon: <Wrench className="h-5 w-5" />,
+  },
+  {
+    href: '/relatorios',
+    label: 'Relatorios',
+    icon: <FileText className="h-5 w-5" />,
   },
 ]
 

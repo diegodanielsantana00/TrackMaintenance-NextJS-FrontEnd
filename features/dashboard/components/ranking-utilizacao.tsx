@@ -1,17 +1,16 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Trophy, Medal, Award } from 'lucide-react'
-import { veiculosData } from '../../veiculos/models/veiculo'
+import { veiculoService } from '../../veiculos/services/veiculo-service'
+import type { Veiculo } from '../../veiculos/models/veiculo'
 
 export function RankingUtilizacao() {
-  // Ordenar veículos por quilometragem (maior para menor)
-  const ranking = [...veiculosData]
-    .map(veiculo => ({
-      ...veiculo,
-      kmNumerico: parseInt(veiculo.km.replace(/\D/g, ''))
-    }))
-    .sort((a, b) => b.kmNumerico - a.kmNumerico)
-    .slice(0, 5)
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+
+  useEffect(() => {
+    veiculoService.list(0, 5).then((res) => setVeiculos(res.data)).catch(() => {})
+  }, [])
 
   const getRankIcon = (position: number) => {
     switch (position) {
@@ -42,14 +41,13 @@ export function RankingUtilizacao() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">Ranking de Utilização</h3>
+        <h3 className="font-semibold text-foreground">Últimos Veículos</h3>
         <Trophy className="h-5 w-5 text-muted-foreground" />
       </div>
 
       <div className="space-y-3">
-        {ranking.map((veiculo, index) => {
+        {veiculos.map((veiculo, index) => {
           const position = index + 1
-          const progress = (veiculo.kmNumerico / ranking[0].kmNumerico) * 100
           
           return (
             <div 
@@ -72,25 +70,11 @@ export function RankingUtilizacao() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-foreground">
-                      {veiculo.km} km
+                      {veiculo.tipo}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {position === 1 ? 'Mais utilizad' : `${position}º lugar`}
+                      {veiculo.ano || '—'}
                     </p>
-                  </div>
-                </div>
-                
-                {/* Progress bar */}
-                <div className="mt-2">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        position === 1 ? 'bg-yellow-500' : 
-                        position === 2 ? 'bg-gray-400' :
-                        position === 3 ? 'bg-amber-600' : 'bg-muted-foreground'
-                      }`}
-                      style={{ width: `${progress}%` }}
-                    />
                   </div>
                 </div>
               </div>

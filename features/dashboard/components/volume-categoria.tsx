@@ -1,39 +1,40 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
-import { veiculosData } from '../../veiculos/models/veiculo'
-
-// Classificar veículos como Leve ou Pesado baseado no modelo
-function getVehicleCategory(modelo: string): 'Leve' | 'Pesado' {
-  const pesadoModels = ['Volvo FH', 'Scania R', 'Mercedes Actros', 'DAF XF', 'Scania S', 'MAN TGX', 'Iveco Stralis']
-  
-  return pesadoModels.some(model => modelo.includes(model)) ? 'Pesado' : 'Leve'
-}
+import { useEffect, useState } from 'react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { veiculoService } from '../../veiculos/services/veiculo-service'
+import type { Veiculo } from '../../veiculos/models/veiculo'
 
 export function VolumePorCategoria() {
-  const categoryData = veiculosData.reduce((acc, veiculo) => {
-    const category = getVehicleCategory(veiculo.modelo)
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+
+  useEffect(() => {
+    veiculoService.list(0, 100).then((res) => setVeiculos(res.data)).catch(() => {})
+  }, [])
+
+  const categoryData = veiculos.reduce((acc, veiculo) => {
+    const category = veiculo.tipo === 'PESADO' ? 'Pesado' : 'Leve'
     
     if (!acc[category]) {
-      acc[category] = { count: 0, km: 0 }
+      acc[category] = { count: 0 }
     }
     
     acc[category].count += 1
-    acc[category].km += parseInt(veiculo.km.replace(/\D/g, ''))
     
     return acc
-  }, {} as Record<string, { count: number; km: number }>)
+  }, {} as Record<string, { count: number }>)
+
+  const total = veiculos.length || 1
 
   const chartData = Object.entries(categoryData).map(([name, data]) => ({
     name,
     viagens: data.count,
-    km: data.km,
-    percentage: ((data.count / veiculosData.length) * 100).toFixed(1)
+    percentage: ((data.count / total) * 100).toFixed(1)
   }))
 
   const colors = {
-    'Leve': '#10B981',   // green
-    'Pesado': '#4F46E5'  // indigo
+    'Leve': '#10B981',
+    'Pesado': '#4F46E5'
   }
 
   return (
@@ -76,9 +77,6 @@ export function VolumePorCategoria() {
                 <p className="text-sm font-medium text-foreground">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {item.viagens} veículos ({item.percentage}%)
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {item.km.toLocaleString('pt-BR')} km
                 </p>
               </div>
             </div>

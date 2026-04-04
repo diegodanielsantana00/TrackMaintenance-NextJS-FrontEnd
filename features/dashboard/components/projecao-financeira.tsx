@@ -1,7 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, Calendar } from 'lucide-react'
-import { manutencaoData } from '../../manutencao/models/manutencao'
+import { manutencaoService } from '../../manutencao/services/manutencao-service'
+import type { Manutencao } from '../../manutencao/models/manutencao'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { 
@@ -11,48 +13,54 @@ function formatCurrency(value: number) {
 }
 
 export function ProjecaoFinanceira() {
+  const [data, setData] = useState<Manutencao[]>([])
+
+  useEffect(() => {
+    manutencaoService.list(0, 100)
+      .then((res) => setData(res.data ?? []))
+      .catch(() => {})
+  }, [])
+
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
 
-  // Calcular custos do mês atual (agendadas + em andamento)
-  const custoMensal = manutencaoData
+  // Calcular custos do mês atual (pendentes + em realização)
+  const custoMensal = data
     .filter(m => {
-      const dataManutencao = new Date(m.dataAgendada)
+      const dataManutencao = new Date(m.dataInicio + 'T00:00:00')
       return dataManutencao.getMonth() === currentMonth && 
              dataManutencao.getFullYear() === currentYear &&
-             (m.status === 'agendada' || m.status === 'em-andamento') &&
-             m.custo
+             (m.status === 'PENDENTE' || m.status === 'EM_REALIZACAO') &&
+             m.custoEstimado
     })
-    .reduce((total, m) => total + (m.custo || 0), 0)
+    .reduce((total, m) => total + (m.custoEstimado || 0), 0)
 
   // Calcular custos já realizados este mês
-  const custoRealizado = manutencaoData
+  const custoRealizado = data
     .filter(m => {
-      if (!m.dataRealizada) return false
-      const dataRealizada = new Date(m.dataRealizada)
-      return dataRealizada.getMonth() === currentMonth && 
-             dataRealizada.getFullYear() === currentYear &&
-             m.status === 'concluida' &&
-             m.custo
+      const dataManutencao = new Date(m.dataInicio + 'T00:00:00')
+      return dataManutencao.getMonth() === currentMonth && 
+             dataManutencao.getFullYear() === currentYear &&
+             m.status === 'CONCLUIDA' &&
+             m.custoEstimado
     })
-    .reduce((total, m) => total + (m.custo || 0), 0)
+    .reduce((total, m) => total + (m.custoEstimado || 0), 0)
 
   const custoTotal = custoMensal + custoRealizado
 
-  // Contar manutenções agendadas
-  const manutencoesPendentes = manutencaoData.filter(m => {
-    const dataManutencao = new Date(m.dataAgendada)
+  // Contar manutenções pendentes
+  const manutencoesPendentes = data.filter(m => {
+    const dataManutencao = new Date(m.dataInicio + 'T00:00:00')
     return dataManutencao.getMonth() === currentMonth && 
            dataManutencao.getFullYear() === currentYear &&
-           (m.status === 'agendada' || m.status === 'em-andamento')
+           (m.status === 'PENDENTE' || m.status === 'EM_REALIZACAO')
   }).length
 
-  const manutencoesConcluidas = manutencaoData.filter(m => {
-    if (!m.dataRealizada) return false
-    const dataRealizada = new Date(m.dataRealizada)
-    return dataRealizada.getMonth() === currentMonth && 
-           dataRealizada.getFullYear() === currentYear &&
-           m.status === 'concluida'
+  const manutencoesConcluidas = data.filter(m => {
+    const dataManutencao = new Date(m.dataInicio + 'T00:00:00')
+    return dataManutencao.getMonth() === currentMonth && 
+           dataManutencao.getFullYear() === currentYear &&
+           m.status === 'CONCLUIDA'
   }).length
 
   return (
@@ -94,23 +102,23 @@ export function ProjecaoFinanceira() {
         {/* Próximas Manutenções de Alto Custo */}
         <div className="border-t border-border pt-3">
           <p className="text-xs font-medium text-muted-foreground mb-2">Maiores custos pendentes:</p>
-          {manutencaoData
+          {data
             .filter(m => {
-              const dataManutencao = new Date(m.dataAgendada)
+              const dataManutencao = new Date(m.dataInicio + 'T00:00:00')
               return dataManutencao.getMonth() === currentMonth && 
                      dataManutencao.getFullYear() === currentYear &&
-                     (m.status === 'agendada' || m.status === 'em-andamento') &&
-                     m.custo
+                     (m.status === 'PENDENTE' || m.status === 'EM_REALIZACAO') &&
+                     m.custoEstimado
             })
-            .sort((a, b) => (b.custo || 0) - (a.custo || 0))
+            .sort((a, b) => (b.custoEstimado || 0) - (a.custoEstimado || 0))
             .slice(0, 2)
             .map(m => (
               <div key={m.id} className="flex items-center justify-between py-1">
                 <div>
                   <p className="text-xs font-medium text-foreground">{m.veiculoPlaca}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{m.descricao}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{m.tipoServico}</p>
                 </div>
-                <p className="text-xs font-bold text-foreground">{formatCurrency(m.custo || 0)}</p>
+                <p className="text-xs font-bold text-foreground">{formatCurrency(m.custoEstimado || 0)}</p>
               </div>
             ))
           }

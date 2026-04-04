@@ -1,19 +1,23 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Calendar, Clock, Wrench, AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { manutencaoData, tipoConfig } from '../../manutencao/models/manutencao'
+import { manutencaoService } from '../../manutencao/services/manutencao-service'
+import { statusConfig } from '../../manutencao/models/manutencao'
+import type { Manutencao } from '../../manutencao/models/manutencao'
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short'
   })
 }
 
 function getDaysUntil(dateStr: string) {
-  const target = new Date(dateStr)
+  const target = new Date(dateStr + 'T00:00:00')
   const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const diffTime = target.getTime() - today.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   
@@ -24,11 +28,19 @@ function getDaysUntil(dateStr: string) {
 }
 
 export function CronogramaManutencao() {
-  // Filtrar apenas manutenções agendadas e em andamento, ordenar por data
-  const proximasManutencoes = manutencaoData
-    .filter(m => m.status === 'agendada' || m.status === 'em-andamento')
-    .sort((a, b) => new Date(a.dataAgendada).getTime() - new Date(b.dataAgendada).getTime())
-    .slice(0, 5)
+  const [manutencoes, setManutencoes] = useState<Manutencao[]>([])
+
+  useEffect(() => {
+    manutencaoService.list(0, 20)
+      .then((res) => {
+        const proximas = (res.data ?? [])
+          .filter(m => m.status === 'PENDENTE' || m.status === 'EM_REALIZACAO')
+          .sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime())
+          .slice(0, 5)
+        setManutencoes(proximas)
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -38,15 +50,15 @@ export function CronogramaManutencao() {
       </div>
 
       <div className="space-y-3">
-        {proximasManutencoes.length === 0 ? (
+        {manutencoes.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-4">
             Nenhuma manutenção agendada
           </p>
         ) : (
-          proximasManutencoes.map((manutencao) => {
-            const tipoInfo = tipoConfig[manutencao.tipo]
-            const daysUntil = getDaysUntil(manutencao.dataAgendada)
-            const isUrgent = manutencao.tipo === 'urgente' || daysUntil === 'Hoje'
+          manutencoes.map((manutencao) => {
+            const s = statusConfig[manutencao.status]
+            const daysUntil = getDaysUntil(manutencao.dataInicio)
+            const isUrgent = daysUntil === 'Hoje'
             
             return (
               <div 
@@ -66,23 +78,23 @@ export function CronogramaManutencao() {
                     <p className="text-sm font-medium text-foreground">
                       {manutencao.veiculoPlaca}
                     </p>
-                    <span className={`text-xs font-medium ${tipoInfo.color}`}>
-                      {tipoInfo.label}
-                    </span>
+                    <Badge variant={s.variant} className="text-xs">
+                      {s.label}
+                    </Badge>
                   </div>
                   
                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                    {manutencao.descricao}
+                    {manutencao.tipoServico}
                   </p>
                   
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {formatDate(manutencao.dataAgendada)}
+                      {formatDate(manutencao.dataInicio)}
                     </div>
                     
                     <Badge 
-                      variant={daysUntil === 'Hoje' || manutencao.tipo === 'urgente' ? 'destructive' : 'outline'}
+                      variant={isUrgent ? 'destructive' : 'outline'}
                       className="text-xs"
                     >
                       {daysUntil}
@@ -90,7 +102,7 @@ export function CronogramaManutencao() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-1">
-                    Técnico: {manutencao.tecnicoResponsavel}
+                    {manutencao.veiculoModelo}
                   </p>
                 </div>
               </div>

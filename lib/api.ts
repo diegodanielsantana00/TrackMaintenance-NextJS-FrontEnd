@@ -7,6 +7,17 @@ export interface ApiResponse<T = unknown> {
   timestamp: string
 }
 
+export interface PagedApiResponse<T = unknown> {
+  status: number
+  message: string
+  data: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  timestamp: string
+}
+
 export class ApiError extends Error {
   status: number
   data?: unknown
@@ -19,10 +30,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+async function request(
   endpoint: string,
   options: RequestInit = {}
-): Promise<ApiResponse<T>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
   const headers: HeadersInit = {
@@ -39,7 +51,7 @@ async function request<T>(
     headers,
   })
 
-  const body: ApiResponse<T> = await response.json()
+  const body = await response.json()
 
   if (!response.ok) {
     const isAuthEndpoint = endpoint.startsWith('/v1/auth/')
@@ -57,14 +69,17 @@ async function request<T>(
 
 export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: 'GET' }),
+    request(endpoint, { ...options, method: 'GET' }) as Promise<ApiResponse<T>>,
+
+  getPaged: <T>(endpoint: string, options?: RequestInit) =>
+    request(endpoint, { ...options, method: 'GET' }) as Promise<PagedApiResponse<T>>,
 
   post: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: 'POST', body: JSON.stringify(data) }),
+    request(endpoint, { ...options, method: 'POST', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
 
   put: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(data) }),
+    request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
 
   delete: <T>(endpoint: string, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: 'DELETE' }),
+    request(endpoint, { ...options, method: 'DELETE' }) as Promise<ApiResponse<T>>,
 }
