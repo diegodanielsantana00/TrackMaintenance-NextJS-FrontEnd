@@ -51,6 +51,10 @@ async function request(
     headers,
   })
 
+  if (response.status === 204) {
+    return { status: 204, message: 'No Content', timestamp: new Date().toISOString() }
+  }
+
   const body = await response.json()
 
   if (!response.ok) {

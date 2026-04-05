@@ -19,20 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu'
-import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Calendar, DollarSign, MoreHorizontal, ArrowRightLeft } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Calendar, DollarSign, ArrowRightLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { manutencaoService } from '../services/manutencao-service'
 import { veiculoService } from '@/features/veiculos/services/veiculo-service'
 import type { Manutencao, ManutencaoRequest, UpdateManutencaoRequest, StatusManutencao } from '../models/manutencao'
-import { statusConfig } from '../models/manutencao'
+import { statusConfig, statusTransitions } from '../models/manutencao'
 import type { Veiculo } from '@/features/veiculos/models/veiculo'
 import { ApiError } from '@/lib/api'
 
@@ -311,35 +303,18 @@ export function ManutencaoTable() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <ArrowRightLeft className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              disabled={m.status === 'PENDENTE'}
-                              onClick={() => handleStatusChange(m.id, 'PENDENTE')}
-                            >
-                              Pendente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={m.status === 'EM_REALIZACAO'}
-                              onClick={() => handleStatusChange(m.id, 'EM_REALIZACAO')}
-                            >
-                              Em Realização
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={m.status === 'CONCLUIDA'}
-                              onClick={() => handleStatusChange(m.id, 'CONCLUIDA')}
-                            >
-                              Concluída
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {statusTransitions[m.status] && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 px-2 text-xs"
+                            onClick={() => handleStatusChange(m.id, statusTransitions[m.status]!)}
+                            title={`Avançar para ${statusConfig[statusTransitions[m.status]!].label}`}
+                          >
+                            <ArrowRightLeft className="h-4 w-4" />
+                            <span className="hidden lg:inline">{statusConfig[statusTransitions[m.status]!].label}</span>
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(m)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -483,9 +458,14 @@ export function ManutencaoTable() {
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PENDENTE">Pendente</SelectItem>
-                    <SelectItem value="EM_REALIZACAO">Em Realização</SelectItem>
-                    <SelectItem value="CONCLUIDA">Concluída</SelectItem>
+                    <SelectItem value={formStatus}>
+                      {statusConfig[formStatus].label} (atual)
+                    </SelectItem>
+                    {statusTransitions[formStatus] && (
+                      <SelectItem value={statusTransitions[formStatus]!}>
+                        {statusConfig[statusTransitions[formStatus]!].label}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

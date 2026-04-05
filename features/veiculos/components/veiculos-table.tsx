@@ -52,6 +52,25 @@ export function VeiculosTable() {
   const [formTipo, setFormTipo]       = useState<TipoVeiculo>('LEVE')
   const [formAno, setFormAno]         = useState('')
 
+  const PLACA_REGEX = /^([A-Z]{3}-\d{4}|[A-Z]{3}\d[A-Z]\d{2})$/
+
+  const formatPlaca = (value: string): string => {
+    const raw = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (raw.length <= 3) return raw
+    const letters = raw.slice(0, 3)
+    const rest = raw.slice(3)
+    // Mercosul: 4º char é dígito e 5º é letra (ex: ABC1D23)
+    if (rest.length >= 2 && /^\d[A-Z]/.test(rest)) {
+      return letters + rest.slice(0, 4)
+    }
+    // Padrão antigo: ABC-1234
+    return letters + '-' + rest.slice(0, 4).replace(/\D/g, '')
+  }
+
+  const isPlacaValid = (placa: string): boolean => {
+    return PLACA_REGEX.test(placa)
+  }
+
   const fetchVeiculos = useCallback(async () => {
     setLoading(true)
     try {
@@ -302,11 +321,17 @@ export function VeiculosTable() {
               <Label htmlFor="placa">Placa</Label>
               <Input
                 id="placa"
-                placeholder="ABC-1234"
+                placeholder="ABC-1234 ou ABC1D23"
                 value={formPlaca}
-                onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
-                maxLength={10}
+                onChange={(e) => setFormPlaca(formatPlaca(e.target.value))}
+                maxLength={8}
+                className={formPlaca && !isPlacaValid(formPlaca) ? 'border-destructive' : ''}
               />
+              {formPlaca && !isPlacaValid(formPlaca) && (
+                <p className="text-xs text-destructive">
+                  Formato inválido. Use padrão antigo (ABC-1234) ou Mercosul (ABC1D23).
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="modelo">Modelo</Label>
@@ -345,7 +370,7 @@ export function VeiculosTable() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || !formPlaca || !formModelo}>
+            <Button onClick={handleSave} disabled={saving || !formPlaca || !formModelo || !isPlacaValid(formPlaca)}>
               {saving ? 'Salvando...' : dialogMode === 'create' ? 'Criar' : 'Salvar'}
             </Button>
           </DialogFooter>

@@ -33,3 +33,9 @@ export const statusConfig: Record<StatusManutencao, { label: string; variant: 'd
   'EM_REALIZACAO': { label: 'Em Realização',  variant: 'default' },
   'CONCLUIDA':     { label: 'Concluída',      variant: 'secondary' },
 }
+
+export const statusTransitions: Record<StatusManutencao, StatusManutencao | null> = {
+  'PENDENTE':      'EM_REALIZACAO',
+  'EM_REALIZACAO': 'CONCLUIDA',
+  'CONCLUIDA':     null,
+}
