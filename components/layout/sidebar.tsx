@@ -41,11 +41,6 @@ const navItems: NavItem[] = [
     label: 'Manutenção',
     icon: <Wrench className="h-5 w-5" />,
   },
-  {
-    href: '/relatorios',
-    label: 'Relatorios',
-    icon: <FileText className="h-5 w-5" />,
-  },
 ]
 
 export function Sidebar() {
