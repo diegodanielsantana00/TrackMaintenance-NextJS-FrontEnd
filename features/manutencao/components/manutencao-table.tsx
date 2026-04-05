@@ -29,12 +29,12 @@ import type { Veiculo } from '@/features/veiculos/models/veiculo'
 import { ApiError } from '@/lib/api'
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
+  if (!dateStr) return ' '
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR')
 }
 
 function formatCurrency(value: number | null) {
-  if (value == null) return '—'
+  if (value == null) return ' '
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
@@ -401,7 +401,7 @@ export function ManutencaoTable() {
                   <SelectContent>
                     {veiculos.map((v) => (
                       <SelectItem key={v.id} value={v.id.toString()}>
-                        {v.placa} — {v.modelo}
+                        {v.placa}   {v.modelo}
                       </SelectItem>
                     ))}
                   </SelectContent>

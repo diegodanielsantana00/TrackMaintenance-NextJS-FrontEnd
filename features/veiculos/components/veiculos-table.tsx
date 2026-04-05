@@ -237,7 +237,7 @@ export function VeiculosTable() {
                       <Badge variant={t.variant} className="text-xs">{t.label}</Badge>
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                      {v.ano || '—'}
+                      {v.ano || ' '}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
