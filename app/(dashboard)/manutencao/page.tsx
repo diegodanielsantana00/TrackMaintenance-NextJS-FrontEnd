@@ -5,7 +5,7 @@ export default function ManutencaoPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header titulo="Manutenção" subtitulo="" />
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-4 sm:p-6">
         <ManutencaoTable />
       </div>
     </div>

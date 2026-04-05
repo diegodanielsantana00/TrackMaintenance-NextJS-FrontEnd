@@ -47,10 +47,10 @@ export function TotalKm() {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h3 className="font-semibold text-foreground">Total de KM Percorrido</h3>
         <Select value={selectedVeiculoId} onValueChange={setSelectedVeiculoId}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
           <SelectContent>

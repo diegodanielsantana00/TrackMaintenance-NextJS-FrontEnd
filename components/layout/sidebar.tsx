@@ -11,7 +11,13 @@ import {
   Truck, 
   LogOut,
   Wrench,
+  Menu,
+  X,
 } from 'lucide-react'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { useState } from 'react'
 
 interface NavItem {
   href: string
@@ -45,17 +51,19 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
 
   const handleLogout = () => {
     authService.logout()
     router.push('/login')
   }
 
-  return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border bg-card">
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-border px-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
           <Image 
             src="/images/logo.png" 
             alt="LogiTrack" 
@@ -74,6 +82,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setOpen(false)}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                 isActive
@@ -87,7 +96,30 @@ export function Sidebar() {
           )
         })}
       </nav>
+    </>
+  )
 
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="sm" className="fixed left-3 top-3.5 z-50 h-9 w-9 p-0 md:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetTitle className="sr-only">Menu</SheetTitle>
+          <div className="flex h-full flex-col">
+            {sidebarContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-border bg-card md:flex">
+      {sidebarContent}
     </aside>
   )
 }

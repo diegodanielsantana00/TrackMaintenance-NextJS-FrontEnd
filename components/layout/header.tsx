@@ -49,9 +49,9 @@ export function Header({ titulo, subtitulo }: HeaderProps) {
     .toUpperCase() || '?'
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{titulo}</h1>
+    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 pl-14 md:pl-6">
+      <div className="min-w-0">
+        <h1 className="truncate text-xl font-semibold text-foreground">{titulo}</h1>
         {subtitulo && (
           <p className="text-sm text-muted-foreground">{subtitulo}</p>
         )}
@@ -63,7 +63,7 @@ export function Header({ titulo, subtitulo }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 rounded-lg bg-muted/50 py-1.5 pl-3 pr-1.5 transition-colors hover:bg-muted">
-              <div className="text-right">
+              <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium text-foreground">{user?.name || '...'}</p>
                 <p className="text-xs text-muted-foreground">{user?.email || '...'}</p>
               </div>

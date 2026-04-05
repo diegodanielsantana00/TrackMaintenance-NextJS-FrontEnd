@@ -15,20 +15,20 @@ export default function DashboardPage() {
         subtitulo=""
       />
 
-      <div className="flex-1 space-y-6 p-6">
+      <div className="flex-1 space-y-4 p-4 sm:space-y-6 sm:p-6">
         {/* Primeira linha - KM Total */}
-        <div className="grid gap-6">
+        <div className="grid gap-4 sm:gap-6">
           <TotalKm />
         </div>
 
         {/* Segunda linha - Gráficos e Cronograma */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           <VolumePorCategoria />
           <CronogramaManutencao />
         </div>
 
         {/* Terceira linha - Ranking e Projeção */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           <RankingUtilizacao />
           <ProjecaoFinanceira />
         </div>

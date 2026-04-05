@@ -247,7 +247,7 @@ export function ManutencaoTable() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-card">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -357,9 +357,9 @@ export function ManutencaoTable() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+      <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <span>Linhas por página:</span>
+          <span className="hidden sm:inline">Linhas por página:</span>
           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="h-8 w-[70px]" size="sm">
               <SelectValue />
@@ -370,13 +370,13 @@ export function ManutencaoTable() {
               <SelectItem value="20">20</SelectItem>
             </SelectContent>
           </Select>
-          <span>
+          <span className="text-xs sm:text-sm">
             {totalElements === 0
               ? 'Nenhum resultado'
               : `${startItem}–${endItem} de ${totalElements}`}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-1 sm:justify-end">
           <Button
             variant="ghost" size="sm"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
