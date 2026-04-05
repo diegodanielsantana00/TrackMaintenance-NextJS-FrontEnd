@@ -1,0 +1,146 @@
+name: Deploy Next.js to VPS Homologação
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build Docker e Deploy na VPS Homologação
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Instalar dependências
+        run: sudo apt-get update && sudo apt-get install -y sshpass rsync
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Buildar imagem Docker
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=https://api-logitrack.danieldiegosantana.me \
+            -f Dockerfile.homolog \
+            -t logitrack-front-1:homologacao-latest .
+
+      - name: Salvar imagem Docker
+        run: |
+          echo "Salvando imagem Docker..."
+          docker save logitrack-front-1:homologacao-latest > logitrack-front-1.tar
+          echo "Tamanho do arquivo:"
+          ls -lh logitrack-front-1.tar
+
+      - name: Criar diretório tmp na VPS
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD_PROD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER_PROD }}@${{ secrets.VPS_HOST_PROD }} "mkdir -p /home/${{ secrets.VPS_USER_PROD }}/tmp"
+
+      - name: Transferir imagem com rsync
+        run: |
+          echo "Transferindo imagem com rsync..."
+          sshpass -p "${{ secrets.VPS_PASSWORD_PROD }}" rsync -avz --progress \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            logitrack-front-1.tar \
+            ${{ secrets.VPS_USER_PROD }}@${{ secrets.VPS_HOST_PROD }}:/home/${{ secrets.VPS_USER_PROD }}/tmp/
+
+      - name: Deploy Docker no VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST_PROD }}
+          username: ${{ secrets.VPS_USER_PROD }}
+          password: ${{ secrets.VPS_PASSWORD_PROD }}
+          script: |
+            set -e
+
+            # Instalar Docker se não estiver instalado
+            if ! command -v docker &> /dev/null; then
+              echo "Instalando Docker..."
+              sudo apt-get update
+              sudo apt-get install -y ca-certificates curl gnupg lsb-release
+              sudo mkdir -p /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+              sudo apt-get update
+              sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+              sudo usermod -aG docker $USER
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              echo "✅ Docker instalado com sucesso"
+            else
+              echo "✅ Docker já está instalado"
+            fi
+
+            # Carregar nova imagem Docker
+            echo "Carregando nova imagem Docker..."
+            sudo docker load < /home/${{ secrets.VPS_USER_PROD }}/tmp/logitrack-front-1.tar
+
+            # ESTRATÉGIA FAST DEPLOY - Fire and Forget
+            echo "Iniciando deploy rápido (fire-and-forget)..."
+            
+            # Gerar nome randômico para o novo container
+            RANDOM_SUFFIX=$(date +%s%N | cut -b1-10)
+            NEW_CONTAINER_NAME="logitrack-front-${RANDOM_SUFFIX}"
+            echo "Novo container: ${NEW_CONTAINER_NAME}"
+            
+            # Buscar e parar TODOS os containers com prefixo logitrack-front
+            echo "Buscando containers ativos com prefixo logitrack-front..."
+            EXISTING_CONTAINERS=$(sudo docker ps --filter "name=logitrack-front" --format "{{.Names}}" || echo "")
+            
+            if [ ! -z "$EXISTING_CONTAINERS" ]; then
+              echo "Parando containers antigos rapidamente:"
+              echo "$EXISTING_CONTAINERS"
+              # Parar containers em paralelo para ser mais rápido
+              echo "$EXISTING_CONTAINERS" | xargs -r -n1 -P5 sudo docker stop
+            else
+              echo "Nenhum container ativo encontrado com prefixo logitrack-front"
+            fi
+
+            echo "Subindo novo container"
+            sudo docker run -d \
+              --name "${NEW_CONTAINER_NAME}" \
+              --restart unless-stopped \
+              -p 3430:3430 \3430
+              --network host \
+              --memory=512m \
+              --cpus=1 \
+              --health-cmd="curl -f http://localhost:3430 || exit 1" \
+              --health-interval=30s \
+              --health-timeout=10s \
+              --health-retries=3 \
+              logitrack-front-1:homologacao-latest
+
+            echo "Container ${NEW_CONTAINER_NAME} iniciado!"
+
+            # CLEANUP ASSÍNCRONO EM BACKGROUND - NÃO TRAVA O DEPLOY
+            echo "Iniciando cleanup assíncrono em background..."
+            (
+              # Aguardar alguns segundos para o novo container estabilizar
+              sleep 30
+              
+              # Buscar novamente todos os containers com prefixo (exceto o novo)
+              ALL_FRONTEND_CONTAINERS=$(sudo docker ps -a --filter "name=logitrack-front" --format "{{.Names}}" | grep -v "^${NEW_CONTAINER_NAME}$" || echo "")
+              
+              if [ ! -z "$ALL_FRONTEND_CONTAINERS" ]; then
+                echo "Removendo containers antigos em background:"
+                echo "$ALL_FRONTEND_CONTAINERS"
+                # Remover containers antigos em paralelo
+                echo "$ALL_FRONTEND_CONTAINERS" | xargs -r -n1 -P5 sh -c 'sudo docker stop "$1" 2>/dev/null || true; sudo docker rm "$1" 2>/dev/null || true' _
+              fi
+              
+              # Limpar imagens órfãs
+              sudo docker image prune -f >/dev/null 2>&1 || true
+              
+              echo "Cleanup concluído - Container ativo: ${NEW_CONTAINER_NAME}"
+            ) &
+
+            # Não esperar o background job terminar
+            echo "Deploy rápido concluído! Cleanup rodando em background..."
+            
+            # Remover imagens antigas principais (rápido)
+            sudo docker image prune -f
+
+            # Limpar arquivo temporário
+            rm -f /home/${{ secrets.VPS_USER_PROD }}/tmp/logitrack-front-1.tar

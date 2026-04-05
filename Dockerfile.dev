@@ -1,0 +1,20 @@
+# Dockerfile para desenvolvimento
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar dependências 
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
+
+# Copiar código fonte
+COPY . .
+
+# Definir variáveis de ambiente padrão para desenvolvimento
+ENV NEXT_PUBLIC_API_URL=https://localhost:3440
+
+# Expor porta de desenvolvimento
+EXPOSE 3430
+
+# Comando de desenvolvimento (hot reload)
+CMD ["npm", "run", "dev"]
