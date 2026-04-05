@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Wrench, AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { manutencaoService } from '../../manutencao/services/manutencao-service'
+import { dashboardService } from '../services/dashboard-service'
 import { statusConfig } from '../../manutencao/models/manutencao'
-import type { Manutencao } from '../../manutencao/models/manutencao'
+import type { StatusManutencao } from '../../manutencao/models/manutencao'
+import type { CronogramaManutencao as CronogramaItem } from '../models/dashboard'
 
 function formatDate(dateStr: string) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
@@ -28,17 +29,11 @@ function getDaysUntil(dateStr: string) {
 }
 
 export function CronogramaManutencao() {
-  const [manutencoes, setManutencoes] = useState<Manutencao[]>([])
+  const [manutencoes, setManutencoes] = useState<CronogramaItem[]>([])
 
   useEffect(() => {
-    manutencaoService.list(0, 20)
-      .then((res) => {
-        const proximas = (res.data ?? [])
-          .filter(m => m.status === 'PENDENTE' || m.status === 'EM_REALIZACAO')
-          .sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime())
-          .slice(0, 5)
-        setManutencoes(proximas)
-      })
+    dashboardService.getCronogramaManutencao()
+      .then((res) => setManutencoes(res.data ?? []))
       .catch(() => {})
   }, [])
 
@@ -56,7 +51,7 @@ export function CronogramaManutencao() {
           </p>
         ) : (
           manutencoes.map((manutencao) => {
-            const s = statusConfig[manutencao.status]
+            const s = statusConfig[manutencao.status as StatusManutencao]
             const daysUntil = getDaysUntil(manutencao.dataInicio)
             const isUrgent = daysUntil === 'Hoje'
             

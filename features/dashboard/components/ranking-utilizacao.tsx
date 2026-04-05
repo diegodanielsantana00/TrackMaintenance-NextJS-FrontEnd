@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { Trophy, Medal, Award } from 'lucide-react'
-import { veiculoService } from '../../veiculos/services/veiculo-service'
-import type { Veiculo } from '../../veiculos/models/veiculo'
+import { dashboardService } from '../services/dashboard-service'
+import type { RankingUtilizacao as RankingItem } from '../models/dashboard'
+
+function formatKm(value: number) {
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value)
+}
 
 export function RankingUtilizacao() {
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+  const [ranking, setRanking] = useState<RankingItem[]>([])
 
   useEffect(() => {
-    veiculoService.list(0, 5).then((res) => setVeiculos(res.data)).catch(() => {})
+    dashboardService.getRankingUtilizacao()
+      .then((res) => setRanking(res.data ?? []))
+      .catch(() => {})
   }, [])
 
   const getRankIcon = (position: number) => {
@@ -41,46 +47,52 @@ export function RankingUtilizacao() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">Últimos Veículos</h3>
+        <h3 className="font-semibold text-foreground">Ranking de Utilização</h3>
         <Trophy className="h-5 w-5 text-muted-foreground" />
       </div>
 
       <div className="space-y-3">
-        {veiculos.map((veiculo, index) => {
-          const position = index + 1
-          
-          return (
-            <div 
-              key={veiculo.id}
-              className={`flex items-center gap-3 rounded-lg border-l-4 p-3 ${getRankColor(position)}`}
-            >
-              <div className="flex items-center justify-center">
-                {getRankIcon(position)}
-              </div>
-              
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {veiculo.placa}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {veiculo.modelo}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-foreground">
-                      {veiculo.tipo}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {veiculo.ano || '—'}
-                    </p>
+        {ranking.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-4">
+            Nenhum veículo encontrado
+          </p>
+        ) : (
+          ranking.map((item, index) => {
+            const position = index + 1
+            
+            return (
+              <div 
+                key={item.veiculoId}
+                className={`flex items-center gap-3 rounded-lg border-l-4 p-3 ${getRankColor(position)}`}
+              >
+                <div className="flex items-center justify-center">
+                  {getRankIcon(position)}
+                </div>
+                
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {item.placa}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.modelo}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-foreground">
+                        {formatKm(item.totalKm)} km
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.totalViagens} viagens
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
     </div>
   )

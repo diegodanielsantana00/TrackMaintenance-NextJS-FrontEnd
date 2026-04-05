@@ -2,39 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { veiculoService } from '../../veiculos/services/veiculo-service'
-import type { Veiculo } from '../../veiculos/models/veiculo'
+import { dashboardService } from '../services/dashboard-service'
+import type { VeiculoPorCategoria } from '../models/dashboard'
 
 export function VolumePorCategoria() {
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+  const [data, setData] = useState<VeiculoPorCategoria[]>([])
 
   useEffect(() => {
-    veiculoService.list(0, 100).then((res) => setVeiculos(res.data)).catch(() => {})
+    dashboardService.getVolumePorCategoria()
+      .then((res) => setData(res.data ?? []))
+      .catch(() => {})
   }, [])
 
-  const categoryData = veiculos.reduce((acc, veiculo) => {
-    const category = veiculo.tipo === 'PESADO' ? 'Pesado' : 'Leve'
-    
-    if (!acc[category]) {
-      acc[category] = { count: 0 }
-    }
-    
-    acc[category].count += 1
-    
-    return acc
-  }, {} as Record<string, { count: number }>)
-
-  const total = veiculos.length || 1
-
-  const chartData = Object.entries(categoryData).map(([name, data]) => ({
-    name,
-    viagens: data.count,
-    percentage: ((data.count / total) * 100).toFixed(1)
+  const chartData = data.map((item) => ({
+    name: item.tipo === 'PESADO' ? 'Pesado' : 'Leve',
+    viagens: item.quantidade,
+    percentage: item.percentual.toFixed(1),
   }))
 
-  const colors = {
+  const colors: Record<string, string> = {
     'Leve': '#10B981',
-    'Pesado': '#4F46E5'
+    'Pesado': '#4F46E5',
   }
 
   return (
@@ -57,11 +45,11 @@ export function VolumePorCategoria() {
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={colors[entry.name as keyof typeof colors]} 
+                    fill={colors[entry.name] ?? '#888'} 
                   />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value} veículos`, 'Quantidade']} />
+              <Tooltip formatter={(value) => [`${value} viagens`, 'Quantidade']} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -71,12 +59,12 @@ export function VolumePorCategoria() {
             <div key={item.name} className="flex items-center gap-3">
               <div 
                 className="h-3 w-3 rounded-full" 
-                style={{ backgroundColor: colors[item.name as keyof typeof colors] }}
+                style={{ backgroundColor: colors[item.name] ?? '#888' }}
               />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {item.viagens} veículos ({item.percentage}%)
+                  {item.viagens} viagens ({item.percentage}%)
                 </p>
               </div>
             </div>
