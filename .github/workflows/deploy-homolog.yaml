@@ -102,7 +102,7 @@ jobs:
             sudo docker run -d \
               --name "${NEW_CONTAINER_NAME}" \
               --restart unless-stopped \
-              -p 3430:3430 \3430
+              -p 3430:3430 \
               --network host \
               --memory=512m \
               --cpus=1 \
