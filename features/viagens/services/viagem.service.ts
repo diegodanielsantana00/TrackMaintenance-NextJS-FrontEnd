@@ -11,9 +11,7 @@ export interface PageResponse<T> {
 
 export const viagemService = {
   async getViagens(page = 0, size = 10): Promise<PageResponse<Viagem>> {
-    const { data } = await api.get<PageResponse<Viagem>>('/v1/viagens', {
-      params: { page, size }
-    })
+    const { data } = await api.get<PageResponse<Viagem>>(`/v1/viagens?page=${page}&size=${size}`)
     return data
   },
 
