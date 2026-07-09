@@ -11,6 +11,7 @@ import {
   Truck, 
   LogOut,
   Wrench,
+  MapPin,
   Menu,
   X,
 } from 'lucide-react'
@@ -40,6 +41,11 @@ const navItems: NavItem[] = [
     href: '/manutencao',
     label: 'Manutenção',
     icon: <Wrench className="h-5 w-5" />,
+  },
+  {
+    href: '/viagens',
+    label: 'Viagens',
+    icon: <MapPin className="h-5 w-5" />,
   },
 ]
 
