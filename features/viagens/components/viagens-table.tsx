@@ -28,7 +28,8 @@ import { ApiError } from '@/lib/api'
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return ' '
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR')
+  const isoStr = dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00'
+  return new Date(isoStr).toLocaleDateString('pt-BR')
 }
 
 export function ViagensTable() {
@@ -66,7 +67,7 @@ export function ViagensTable() {
     setLoading(true)
     try {
       const res = await viagemService.getViagens(page, pageSize)
-      setViagens(res.content ?? [])
+      setViagens(res.data ?? [])
       setTotalPages(res.totalPages ?? 1)
       setTotalElements(res.totalElements ?? 0)
     } catch {
@@ -118,8 +119,8 @@ export function ViagensTable() {
     setDialogMode('edit')
     setEditingId(v.id)
     setFormVeiculoId(v.veiculoId.toString())
-    setFormDataSaida(v.dataSaida)
-    setFormDataChegada(v.dataChegada ?? '')
+    setFormDataSaida(v.dataSaida.split('T')[0])
+    setFormDataChegada(v.dataChegada ? v.dataChegada.split('T')[0] : '')
     setFormOrigem(v.origem)
     setFormDestino(v.destino)
     setFormKmPercorrida(v.kmPercorrida?.toString() ?? '')
@@ -132,8 +133,8 @@ export function ViagensTable() {
       if (dialogMode === 'create') {
         const payload: ViagemRequest = {
           veiculoId: parseInt(formVeiculoId),
-          dataSaida: formDataSaida,
-          dataChegada: formDataChegada || null,
+          dataSaida: formDataSaida ? `${formDataSaida}T00:00:00` : '',
+          dataChegada: formDataChegada ? `${formDataChegada}T00:00:00` : null,
           origem: formOrigem,
           destino: formDestino,
           kmPercorrida: formKmPercorrida ? parseFloat(formKmPercorrida) : 0, // BUG 2: Aceita negativos no backend
@@ -143,8 +144,8 @@ export function ViagensTable() {
       } else {
         const payload: UpdateViagemRequest = {
           veiculoId: parseInt(formVeiculoId), // BUG 4: O backend ignora isso, mas enviamos
-          dataSaida: formDataSaida,
-          dataChegada: formDataChegada || null,
+          dataSaida: formDataSaida ? `${formDataSaida}T00:00:00` : '',
+          dataChegada: formDataChegada ? `${formDataChegada}T00:00:00` : null,
           origem: formOrigem,
           destino: formDestino,
           kmPercorrida: formKmPercorrida ? parseFloat(formKmPercorrida) : 0,
